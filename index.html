@@ -668,6 +668,28 @@
 #craftRecipeList .craftRecipeBtn { display:flex; align-items:center; gap:8px; }
 #craftRecipeList .craftRecipeBtn > span:last-child { min-width:0; }
 .ttItemIcon canvas.itemIcon { display:block; }
+
+  #charsOverlay{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.72);backdrop-filter:blur(2px)}
+  #charsOverlay.open{display:flex}
+  #charsPanel{width:min(520px,95vw);max-height:min(720px,92vh);overflow:auto;color:#e9ddbd;background:linear-gradient(180deg,#211b14,#100e0b);border:2px solid #765b34;border-radius:10px;box-shadow:0 12px 45px rgba(0,0,0,.78);font-family:'Trebuchet MS','Segoe UI',sans-serif}
+  #charsHeader{height:48px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #554126;background:linear-gradient(180deg,#3a2d1c,#21180f);position:sticky;top:0;z-index:2}
+  #charsTitle{font-size:16px;font-weight:900;letter-spacing:1px;flex:1}
+  #charsClose{width:32px;height:32px;border:1px solid #805f3b;border-radius:5px;background:#2b1d15;color:#f1d7b0;font-size:22px;line-height:26px;cursor:pointer}
+  #charsBody{padding:12px 14px;font-size:13px}
+  #charsMsg{min-height:16px;font-size:12px;margin-bottom:8px;color:#8a7a58}
+  .charCard{padding:10px;margin-bottom:10px;border:1px solid #4a3c26;border-radius:7px;background:rgba(0,0,0,.25)}
+  .charCard.active{border-color:#8ecf7a;box-shadow:0 0 0 1px rgba(142,207,122,.35)}
+  .charCardTop{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .charCardName{font-weight:900;color:#f0dfa8;font-size:15px}
+  .charCardTag{font-size:10px;font-weight:900;letter-spacing:.5px;color:#8ecf7a;border:1px solid #4d7a3d;border-radius:4px;padding:1px 5px}
+  .charCardInfo{font-size:11.5px;color:#b6a884;margin:3px 0 8px}
+  .charCardBtns{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .charCardBtns button,#charsHint button{padding:6px 10px;border:1px solid #80663b;border-radius:5px;color:#eadbb6;background:linear-gradient(180deg,#4b3a23,#292015);font:700 12px 'Trebuchet MS','Segoe UI',sans-serif;cursor:pointer}
+  .charCardBtns button.danger{border-color:#8a3b3b;color:#f0b4a8}
+  .charCardBtns select{max-width:100%;padding:5px;border:1px solid #80663b;border-radius:5px;background:#1a140d;color:#eadbb6;font-size:11.5px}
+  #charsEmpty{padding:18px;text-align:center;color:#b6a884}
+  #charsBody .charCardBtns button{padding:6px 10px;border:1px solid #80663b;border-radius:5px;color:#eadbb6;background:linear-gradient(180deg,#4b3a23,#292015);font:700 12px 'Trebuchet MS','Segoe UI',sans-serif;cursor:pointer}
+  #charsHint{margin-top:4px;font-size:11px;color:#8a7a58;line-height:1.4}
 </style>
 </style>
 </head>
@@ -685,6 +707,7 @@
     <div id="titleButtons">
       <button id="titleStartBtn" type="button">Iniciar</button>
       <button id="titleLoadBtn" type="button">Carregar</button>
+      <button id="titleCharsBtn" type="button">Meus Personagens</button>
     </div>
     <div id="titleFootnote">Um protótipo de RPG 2D</div>
   </div>
@@ -763,6 +786,7 @@
       <button id="loadBtn" type="button" title="Carregar (L)">📂 Carregar</button>
       <button id="newGameBtn" type="button" class="danger" title="Novo jogo">🆕 Novo</button>
     </div>
+    <button id="charsBtn" type="button" style="display:block;width:100%;margin-top:4px;padding:6px 10px;border:1px solid #80663b;border-radius:5px;color:#eadbb6;background:linear-gradient(180deg,#4b3a23,#292015);font:700 12px 'Trebuchet MS','Segoe UI',sans-serif;cursor:pointer;text-align:left">👥 Meus Personagens</button>
     <div id="saveRow" style="margin-top:4px">
       <button id="exportSaveBtn" type="button" title="Baixar arquivo de save">⬇ Exportar</button>
       <button id="importSaveBtn" type="button" title="Carregar arquivo de save">⬆ Importar</button>
@@ -797,6 +821,15 @@
       <button id="statsClose" type="button" aria-label="Fechar">×</button>
     </div>
     <div id="statsBody"></div>
+  </div>
+</div>
+
+<div id="charsOverlay" aria-hidden="true">
+  <div id="charsPanel" role="dialog" aria-label="Meus Personagens">
+    <div id="charsHeader"><div id="charsTitle">👥 MEUS PERSONAGENS</div><button id="charsClose" type="button" aria-label="Fechar">×</button></div>
+    <div id="charsBody"><div id="charsMsg"></div>
+      <div class="charCardBtns" style="margin-bottom:10px"><button type="button" id="charsExportAll">⬇ Exportar todos</button><button type="button" id="charsImportAll">⬆ Importar arquivo</button></div><div id="charsList"></div>
+      <div id="charsHint">Os personagens ficam salvos neste navegador (até 10, com as 3 últimas versões de cada). Para levar para outro aparelho ou ter cópia de segurança, use "Exportar todos": o arquivo leva todos os personagens e, ao importar, você escolhe qual jogar.</div></div>
   </div>
 </div>
 
@@ -5467,13 +5500,25 @@ function renderSkillTree(){
     const th=document.createElement('div');th.className='skillThreshold '+(l?'':'skillLockedText');
     if(l>=5)th.textContent=thresholdLabel+' • Nível máximo.';else{const nx=def.ranks[l]||def.ranks[0];th.textContent='Próximo: '+nx.requirement+' • '+progressText;}
     n.appendChild(th);
-    if(l){const a=document.createElement('div');a.className='skillAction';const b=document.createElement('button');b.textContent=actionText;b.onclick=()=>{
-      const existing=inventory.hotbar.findIndex(s=>s&&s.type==='skill'&&s.id===def.id);
-      if(existing>=0){showInventoryToast(def.name+' já está no espaço '+(existing+1)+'.');return;}
-      const free=inventory.hotbar.findIndex(s=>!s);
-      if(free<0){showInventoryToast('Hotbar cheio. Arraste uma habilidade para substituir um espaço.');return;}
-      assignSkillToHotbar(def.id,free);
-    };a.appendChild(b);n.appendChild(a)}
+    if(l){
+      const act=document.createElement('div');act.className='skillAction';
+      const slot=inventory.hotbar.findIndex(s=>s&&s.type==='skill'&&s.id===def.id);
+      const b=document.createElement('button');
+      if(slot>=0){
+        b.textContent='Já está na Hotbar (espaço '+(slot+1)+')';b.disabled=true;b.style.opacity='.7';
+        const r=document.createElement('button');r.textContent='Remover da Hotbar';r.onclick=()=>{clearSkillFromHotbar(slot);renderSkillTree();};
+        act.appendChild(b);act.appendChild(r);
+      }else{
+        b.textContent='Adicionar à Hotbar';
+        b.onclick=()=>{
+          const free=inventory.hotbar.findIndex(s=>!s);
+          if(free<0){showInventoryToast('Hotbar cheia. Arraste a habilidade para substituir um espaço.');return;}
+          assignSkillToHotbar(def.id,free);renderSkillTree();
+        };
+        act.appendChild(b);
+      }
+      n.appendChild(act);
+    }
     return n;
   };
   const pnode=renderNode(SKILL_DEFS.predada,skillState.predada,createPredadaIcon,'Arremessa uma pedra no alvo e simula um impacto com terra e cascalhos. Usa mana e possui recarga própria.',(bestiaryKills.rat|0)+' ratos / '+(bestiaryKills.guabiru|0)+' Guabirús','50 Guabirús','Colocar no hotbar');root.appendChild(pnode);
@@ -10821,6 +10866,7 @@ const ITEM_DEFS = {
   guabiru_pelt:{name:'Pele de Guabirú',type:'Material',icon:'⬛',desc:'Pele negra e resistente arrancada de um Guabirú. Material raro de crafting.',stats:'Valor 25 gp'},
   swamp_snake_pelt:{name:'Pele de Cobra do Pântano',type:'Material',icon:'🐍',desc:'Pele escamosa de uma Cobra do Pântano, úmida e resistente. Material de crafting encontrado no Ninho das Serpentes.',stats:'Valor 8 gp'},
   tiger_pants:{name:'Calça de Tigre Rosa',type:'Perna',icon:'👖',desc:'Calça resistente de pelagem branca com listras rosa, costurada com peles de Tigre Rosa. Exige nível 15 para ser usada.',stats:'HP +35 · Nível mínimo 15 · Valor 230 gp',hpBonus:35,minLevel:15},
+  wolf_ring:{name:'Anel do Lobo',type:'Anel',icon:'💍',desc:'Anel de pedra cinza-azulada trançada, com a cabeça de um lobo entalhada em prata. Simples, mas dá mais força e vigor a quem o usa. Exige nível 20 para ser usado.',stats:'Ataque +2 · HP +10 · Nível mínimo 20 · Valor 300 gp',hpBonus:10,atkBonus:2,minLevel:20},
   sky_wolf_pelt:{name:'Pele de Lobo do Céu',type:'Material',icon:'🐺',desc:'Pele macia de pelagem cinza-azulada, arrancada de um Lobo do Céu da Ilha Celeste. Pode ser vendida.',stats:'Valor 90 gp'},
   pink_tiger_pelt:{name:'Pele de Tigre Rosa',type:'Material',icon:'🐯',desc:'Pele macia de pelagem branca com listras rosa, arrancada de um Tigre Rosa do Campo Selvagem. Pode ser vendida.',stats:'Valor 40 gp'},
   rosarok_boots:{name:'Botas do Rosarok',type:'Botas',icon:'👢',desc:'Botas de couro reforçadas com as patas do Rosarok, o Rei Tigre. As garras brilham a cada passo e a pelagem rosa dá agilidade a quem as calça. Exigem nível 20 para serem usadas.',stats:'HP +20 · Velocidade de movimento +10% · Nível mínimo 20 · Valor 600 gp',hpBonus:20,moveSpeedBonus:0.10,minLevel:20},
@@ -10901,6 +10947,13 @@ const CRAFT_RECIPES = [
     resultId: 'tiger_pants',
     resultQty: 1,
     materials: [ { id: 'pink_tiger_pelt', qty: 5 } ]
+  },
+  {
+    id: 'wolf_ring',
+    name: 'Anel do Lobo',
+    resultId: 'wolf_ring',
+    resultQty: 1,
+    materials: [ { id: 'sky_wolf_pelt', qty: 3 } ]
   },
   {
     id: 'rosarok_boots',
@@ -12387,6 +12440,35 @@ SKY_WOLF_PELT_ICON.onload = () => {
   if (typeof renderHotbar === 'function') renderHotbar();
 };
 
+const WOLF_RING_ICON = new Image();
+WOLF_RING_ICON.decoding = 'async';
+WOLF_RING_ICON.src = 'data:image/webp;base64,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';
+function createWolfRingIcon(size) {
+  size = Math.max(12, size || 32);
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  c.style.width = size + 'px'; c.style.height = size + 'px';
+  c.className = 'itemIcon';
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, size, size);
+  if (WOLF_RING_ICON.complete && WOLF_RING_ICON.naturalWidth) {
+    const iw = WOLF_RING_ICON.naturalWidth, ih = WOLF_RING_ICON.naturalHeight;
+    const k = Math.min(size / iw, size / ih) * 0.96;
+    const dw = iw * k, dh = ih * k;
+    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+    x.drawImage(WOLF_RING_ICON, (size - dw) / 2, (size - dh) / 2, dw, dh);
+  } else {
+    x.font = Math.round(size * 0.78) + 'px sans-serif';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText('💍', size / 2, size / 2);
+  }
+  return c;
+}
+WOLF_RING_ICON.onload = () => {
+  if (typeof renderInventory === 'function') renderInventory();
+  if (typeof renderHotbar === 'function') renderHotbar();
+};
+
 function createCanonicalItemIcon(itemId, size) {
   size = Math.max(12, size || 32);
   if (!itemId) return null;
@@ -12399,6 +12481,7 @@ function createCanonicalItemIcon(itemId, size) {
   if (itemId === 'rosarok_boots' && typeof createRosarokBootsIcon === 'function') return createRosarokBootsIcon(size);
   if (itemId === 'rosarok_paw' && typeof createRosarokPawIcon === 'function') return createRosarokPawIcon(size);
   if (itemId === 'sky_wolf_pelt') return createSkyWolfPeltIcon(size);
+  if (itemId === 'wolf_ring') return createWolfRingIcon(size);
   if (itemId === 'pink_tiger_pelt' && typeof createPinkTigerPeltIcon === 'function') return createPinkTigerPeltIcon(size);
   if (itemId === 'tiger_pants' && typeof createTigerPantsIcon === 'function') return createTigerPantsIcon(size);
   if (itemId === 'swamp_armor' && typeof createSwampArmorIcon === 'function') return createSwampArmorIcon(size);
@@ -14340,6 +14423,7 @@ function hideDeathScreen() {
 }
 
 function loadGame(dataOverride) {
+  if (!dataOverride && typeof migrateOldSaveToChars === 'function') { try { migrateOldSaveToChars(); } catch (_) {} }
   const data = dataOverride || loadSaveRaw();
   if (!data) { setSaveStatus('Nenhum save válido encontrado.', false); return false; }
   try {
@@ -14357,6 +14441,12 @@ function loadGame(dataOverride) {
     setSaveStatus('Carregado (salvo às ' + hh + ':' + mm + ')', true);
     if (typeof showInventoryToast === 'function') showInventoryToast('Jogo carregado.');
     hideDeathScreen();
+    if (!dataOverride) {
+      try {
+        const st = readCharStore(); activeCharId = null;
+        for (const id in st.chars) { const c = st.chars[id]; if (c.versions.some(v => v.ts === Number(data.timestamp))) { activeCharId = id; break; } }
+      } catch (_) {}
+    }
     return true;
   } catch (err) {
     console.error('Erro ao aplicar save:', err);
@@ -14413,16 +14503,36 @@ function exportSaveFile() {
     setSaveStatus('Nada para exportar.', false);
     return;
   }
-  // Também grava no localStorage
-  saveGame(true);
+  // Também grava no localStorage (e atualiza o cartão do personagem em uso)
+  if (titleScreen.classList.contains('hidden') && charScreen.classList.contains('hidden')) saveGame(true);
+  // Exporta TODOS os personagens num único arquivo
+  try {
+    migrateOldSaveToChars();
+    const st = readCharStore(), n = Object.keys(st.chars).length;
+    if (n > 0) {
+      const bundle = { bundle: 'fdom-personagens', bundleVersion: 1, exportedAt: Date.now(), activeCharId: activeCharId || null, chars: st.chars };
+      const bb = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+      const bu = URL.createObjectURL(bb), ba = document.createElement('a'), bt = new Date(), q = x => String(x).padStart(2, '0');
+      ba.href = bu;
+      ba.download = 'Meus_Personagens_' + n + '_' + bt.getFullYear() + '-' + q(bt.getMonth() + 1) + '-' + q(bt.getDate()) + '_' + q(bt.getHours()) + 'h' + q(bt.getMinutes()) + 'm' + q(bt.getSeconds()) + 's.json';
+      document.body.appendChild(ba); ba.click(); document.body.removeChild(ba); URL.revokeObjectURL(bu);
+      setSaveStatus('Exportados ' + n + ' personagem(ns) (.json).', true);
+      if (typeof showInventoryToast === 'function') showInventoryToast('Arquivo com ' + n + ' personagem(ns) baixado.');
+      if (typeof charsSay === 'function') charsSay('Arquivo com ' + n + ' personagem(ns) baixado.', true);
+      return;
+    }
+  } catch (err) { console.warn('bundle export', err); }
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const t = new Date();
-  const stamp = t.getFullYear() + String(t.getMonth()+1).padStart(2,'0') + String(t.getDate()).padStart(2,'0') + '_' +
-    String(t.getHours()).padStart(2,'0') + String(t.getMinutes()).padStart(2,'0');
+  const p2 = n => String(n).padStart(2, '0');
+  const stamp = t.getFullYear() + '-' + p2(t.getMonth() + 1) + '-' + p2(t.getDate()) + '_' + p2(t.getHours()) + 'h' + p2(t.getMinutes()) + 'm' + p2(t.getSeconds()) + 's';
+  const clean = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
+  const charName = clean(player && player.appearance && player.appearance.name) || 'Heroi';
+  const className = clean(typeof getClassName === 'function' ? getClassName() : '') || 'Aventureiro';
   a.href = url;
-  a.download = 'floresta_sombria_save_' + stamp + '.json';
+  a.download = charName + '_' + className + '_' + stamp + '.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -14438,6 +14548,7 @@ function importSaveFile(file) {
   reader.onload = () => {
     try {
       const data = JSON.parse(reader.result);
+      if (data && typeof data === 'object' && data.bundle === 'fdom-personagens' && data.chars && typeof data.chars === 'object') { importCharBundle(data); return; }
       if (!data || typeof data !== 'object' || !data.player) {
         setSaveStatus('Arquivo de save inválido: falta a seção do jogador.', false);
         return;
@@ -14449,6 +14560,7 @@ function importSaveFile(file) {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
       lastAutoSave = performance.now();
       hideCharScreen(); hideTitleScreen();
+      activeCharId = null; try { persistActiveChar(); } catch (_) {}
       setSaveStatus('Save importado e carregado com sucesso.', true);
       if (typeof showInventoryToast === 'function') showInventoryToast('Save importado.');
     } catch (err) {
@@ -14459,6 +14571,182 @@ function importSaveFile(file) {
   reader.onerror = () => setSaveStatus('Erro ao ler o arquivo.', false);
   reader.readAsText(file);
 }
+
+
+/* =====================================================================
+   MEUS PERSONAGENS — vários personagens salvos no navegador
+   ===================================================================== */
+const CHARS_KEY = 'fdom_personagens_v1';
+const CHARS_MAX = 10, CHAR_VERSIONS = 3, VERSION_GAP_MS = 5 * 60 * 1000;
+let activeCharId = null;
+function readCharStore() {
+  try { const st = JSON.parse(localStorage.getItem(CHARS_KEY) || 'null'); if (st && st.chars && typeof st.chars === 'object') return st; } catch (_) {}
+  return { chars: {} };
+}
+function writeCharStore(st) { try { localStorage.setItem(CHARS_KEY, JSON.stringify(st)); return true; } catch (_) { return false; } }
+function charCount() { return Object.keys(readCharStore().chars).length; }
+function charSummaryOf(data) {
+  const pl = (data && data.player) || {}, ap = pl.appearance || {};
+  return { name: ap.name || 'Herói', classId: pl.classId || null, level: pl.level | 0, mapLevel: Number(data.mapLevel) || 1, ts: Number(data.timestamp) || Date.now() };
+}
+function migrateOldSaveToChars() {
+  const st = readCharStore();
+  if (Object.keys(st.chars).length) return;
+  const d = loadSaveRaw();
+  if (!d || !d.player) return;
+  const id = 'c' + Date.now().toString(36);
+  st.chars[id] = Object.assign({ id, versions: [{ ts: Number(d.timestamp) || Date.now(), data: d }] }, charSummaryOf(d));
+  writeCharStore(st);
+  activeCharId = id;
+}
+function persistActiveChar() {
+  if (typeof titleScreen !== 'undefined' && titleScreen && !titleScreen.classList.contains('hidden')) return;
+  if (typeof charScreen !== 'undefined' && charScreen && !charScreen.classList.contains('hidden')) return;
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (!raw) return;
+  const data = JSON.parse(raw);
+  const st = readCharStore();
+  let id = activeCharId;
+  if (!id || !st.chars[id]) {
+    if (Object.keys(st.chars).length >= CHARS_MAX) { setSaveStatus('Limite de ' + CHARS_MAX + ' personagens: exclua um em "Meus Personagens".', false); return; }
+    id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    activeCharId = id; st.chars[id] = { id, versions: [] };
+  }
+  const c = st.chars[id];
+  Object.assign(c, charSummaryOf(data));
+  const ts = c.ts;
+  if (c.versions.length && ts - c.versions[0].ts < VERSION_GAP_MS) c.versions[0] = { ts, data };
+  else c.versions.unshift({ ts, data });
+  c.versions = c.versions.slice(0, CHAR_VERSIONS);
+  if (!writeCharStore(st)) {
+    Object.values(st.chars).forEach(x => { x.versions = x.versions.slice(0, 1); });
+    if (!writeCharStore(st)) setSaveStatus('Sem espaço no navegador para guardar o personagem. Use Exportar.', false);
+  }
+}
+const _origSaveGameChars = saveGame;
+saveGame = function () {
+  const ok = _origSaveGameChars.apply(this, arguments);
+  if (ok) { try { persistActiveChar(); } catch (e) { console.warn('chars', e); } }
+  return ok;
+};
+
+const charsOverlay = document.getElementById('charsOverlay');
+const charsList = document.getElementById('charsList');
+const charsMsg = document.getElementById('charsMsg');
+function charsSay(m, ok) { if (charsMsg) { charsMsg.textContent = m || ''; charsMsg.style.color = ok === false ? '#e88a7a' : (ok === true ? '#8ecf7a' : '#8a7a58'); } }
+function fmtDT(ts) {
+  const t = new Date(ts), p = n => String(n).padStart(2, '0');
+  return p(t.getDate()) + '/' + p(t.getMonth() + 1) + '/' + t.getFullYear() + ' ' + p(t.getHours()) + ':' + p(t.getMinutes());
+}
+const MAP_NAMES_CHARS = { 1: 'Fosso dos Roedores', 2: 'Ninho das Serpentes', 3: 'Covil da Quimera', 4: 'Campo Selvagem', 5: 'Ilha Celeste' };
+
+// Importa um arquivo com vários personagens: mescla na lista e pergunta qual jogar.
+function importCharBundle(b) {
+  const st = readCharStore();
+  let added = 0, updated = 0, skipped = 0;
+  for (const id of Object.keys(b.chars)) {
+    const inc = b.chars[id];
+    if (!inc || !Array.isArray(inc.versions) || !inc.versions.length || !inc.versions[0].data || !inc.versions[0].data.player) { skipped++; continue; }
+    const cur = st.chars[id];
+    if (!cur) {
+      if (Object.keys(st.chars).length >= CHARS_MAX) { skipped++; continue; }
+      st.chars[id] = Object.assign({ id }, charSummaryOf(inc.versions[0].data), { versions: inc.versions.slice(0, CHAR_VERSIONS) });
+      added++;
+    } else {
+      const seen = new Set(), all = [];
+      cur.versions.concat(inc.versions).forEach(v => { if (v && v.data && !seen.has(v.ts)) { seen.add(v.ts); all.push(v); } });
+      all.sort((x, y) => y.ts - x.ts);
+      const newer = all[0] && all[0].ts > (cur.versions[0] ? cur.versions[0].ts : 0);
+      cur.versions = all.slice(0, CHAR_VERSIONS);
+      Object.assign(cur, charSummaryOf(cur.versions[0].data));
+      if (newer) updated++;
+    }
+  }
+  if (!writeCharStore(st)) { setSaveStatus('Sem espaço no navegador para importar os personagens.', false); return; }
+  openCharsPanel();
+  let msg = 'Importado: ' + added + ' novo(s)' + (updated ? ', ' + updated + ' atualizado(s)' : '') + '.';
+  if (skipped) msg += ' ' + skipped + ' não importado(s) (limite de ' + CHARS_MAX + ' ou arquivo inválido).';
+  charsSay(msg + ' Escolha qual personagem jogar.', skipped ? false : true);
+  setSaveStatus(msg, !skipped);
+}
+function renderCharsList() {
+  if (!charsList) return;
+  const st = readCharStore();
+  const arr = Object.values(st.chars).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  charsList.innerHTML = '';
+  if (!arr.length) { charsList.innerHTML = '<div id="charsEmpty">Nenhum personagem salvo ainda. Crie um em "Iniciar".</div>'; return; }
+  arr.forEach(c => {
+    const card = document.createElement('div'); card.className = 'charCard' + (c.id === activeCharId ? ' active' : '');
+    const cd = (typeof CLASS_DEFS !== 'undefined' && c.classId && CLASS_DEFS[c.classId]) ? CLASS_DEFS[c.classId].name : 'Aventureiro';
+    const top = document.createElement('div'); top.className = 'charCardTop';
+    const nm = document.createElement('span'); nm.className = 'charCardName'; nm.textContent = c.name; top.appendChild(nm);
+    if (c.id === activeCharId) { const tg = document.createElement('span'); tg.className = 'charCardTag'; tg.textContent = 'EM USO'; top.appendChild(tg); }
+    card.appendChild(top);
+    const info = document.createElement('div'); info.className = 'charCardInfo';
+    info.textContent = cd + ' · Nível ' + (c.level | 0) + ' · ' + (MAP_NAMES_CHARS[c.mapLevel] || 'Mapa ' + c.mapLevel) + ' · salvo em ' + fmtDT(c.ts);
+    card.appendChild(info);
+    const btns = document.createElement('div'); btns.className = 'charCardBtns';
+    const mk = (label, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if (cls) b.className = cls; b.addEventListener('click', e => { e.stopPropagation(); fn(); }); btns.appendChild(b); return b; };
+    mk('▶ Carregar', '', () => loadCharVersion(c.id, 0));
+    let sel = null;
+    if (c.versions.length > 1) {
+      sel = document.createElement('select');
+      c.versions.forEach((v, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = (i === 0 ? 'Último: ' : 'Versão anterior: ') + fmtDT(v.ts) + ' (nível ' + ((v.data && v.data.player && v.data.player.level) | 0) + ')'; sel.appendChild(o); });
+      btns.appendChild(sel);
+      mk('Carregar versão', '', () => loadCharVersion(c.id, parseInt(sel.value, 10) || 0));
+    }
+    mk('⬇ Exportar', '', () => exportCharVersion(c.id, sel ? (parseInt(sel.value, 10) || 0) : 0));
+    mk('🗑 Excluir', 'danger', () => deleteChar(c.id));
+    card.appendChild(btns);
+    charsList.appendChild(card);
+  });
+}
+function openCharsPanel() { migrateOldSaveToChars(); charsSay(''); renderCharsList(); if (charsOverlay) { charsOverlay.classList.add('open'); charsOverlay.setAttribute('aria-hidden', 'false'); } }
+function closeCharsPanel() { if (charsOverlay) { charsOverlay.classList.remove('open'); charsOverlay.setAttribute('aria-hidden', 'true'); } }
+function loadCharVersion(id, vi) {
+  const st = readCharStore(), c = st.chars[id], v = c && c.versions[vi];
+  if (!v) { charsSay('Versão não encontrada.', false); return; }
+  // guarda o progresso do personagem atual antes de trocar (se houver um em jogo)
+  try { if (player && activeCharId && !player.dead && titleScreen.classList.contains('hidden')) saveGame(true); } catch (_) {}
+  const data = JSON.parse(JSON.stringify(v.data));
+  const ok = loadGame(data);
+  if (!ok) { charsSay('Não foi possível carregar este save.', false); return; }
+  activeCharId = id;
+  try { data.version = SAVE_VERSION; localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (_) {}
+  lastAutoSave = performance.now();
+  hideCharScreen(); hideTitleScreen(); closeCharsPanel();
+  if (typeof showInventoryToast === 'function') showInventoryToast(c.name + ' carregado.');
+}
+function exportCharVersion(id, vi) {
+  const c = readCharStore().chars[id], v = c && c.versions[vi];
+  if (!v) return;
+  const clean = x => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
+  const cn = (CLASS_DEFS[c.classId] && CLASS_DEFS[c.classId].name) || 'Aventureiro';
+  const t = new Date(v.ts), p2 = n => String(n).padStart(2, '0');
+  const stamp = t.getFullYear() + '-' + p2(t.getMonth() + 1) + '-' + p2(t.getDate()) + '_' + p2(t.getHours()) + 'h' + p2(t.getMinutes()) + 'm' + p2(t.getSeconds()) + 's';
+  const blob = new Blob([JSON.stringify(v.data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = (clean(c.name) || 'Heroi') + '_' + clean(cn) + '_' + stamp + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  charsSay('Arquivo exportado.', true);
+}
+function deleteChar(id) {
+  const st = readCharStore(), c = st.chars[id]; if (!c) return;
+  if (!confirm('Excluir o personagem "' + c.name + '" e todas as versões salvas dele?\nEsta ação não pode ser desfeita.')) return;
+  delete st.chars[id]; writeCharStore(st);
+  if (activeCharId === id) activeCharId = null;
+  renderCharsList(); charsSay('Personagem excluído.', true);
+}
+(function wireCharsUi() {
+  const cb = document.getElementById('charsClose'); if (cb) cb.addEventListener('click', e => { e.stopPropagation(); closeCharsPanel(); });
+  if (charsOverlay) charsOverlay.addEventListener('click', e => { if (e.target === charsOverlay) closeCharsPanel(); });
+  const b1 = document.getElementById('titleCharsBtn'); if (b1) b1.addEventListener('click', e => { e.stopPropagation(); openCharsPanel(); });
+  const bx = document.getElementById('charsExportAll'); if (bx) bx.addEventListener('click', e => { e.stopPropagation(); if (!player) { charsSay('Nada para exportar.', false); return; } exportSaveFile(); });
+  const bi = document.getElementById('charsImportAll'); if (bi) bi.addEventListener('click', e => { e.stopPropagation(); const inp = document.getElementById('importSaveInput'); if (inp) inp.click(); });
+  const b2 = document.getElementById('charsBtn'); if (b2) b2.addEventListener('click', e => { e.stopPropagation(); openCharsPanel(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && charsOverlay && charsOverlay.classList.contains('open')) { closeCharsPanel(); e.stopPropagation(); } }, true);
+  migrateOldSaveToChars();
+})();
 
 // Botões e atalhos
 const saveBtn = document.getElementById('saveBtn');
@@ -14774,7 +15062,10 @@ function showCharScreen() {
 }
 function hideCharScreen() { if (charScreen) charScreen.classList.add('hidden'); }
 
-if (titleStartBtn) titleStartBtn.addEventListener('click', () => { hideTitleScreen(); showCharScreen(); });
+if (titleStartBtn) titleStartBtn.addEventListener('click', () => {
+  if (charCount() >= CHARS_MAX) { openCharsPanel(); charsSay('Limite de ' + CHARS_MAX + ' personagens. Exclua um para criar outro.', false); return; }
+  hideTitleScreen(); showCharScreen();
+});
 if (titleLoadBtn) titleLoadBtn.addEventListener('click', e => {
   e.stopPropagation();
   if (!hasSave()) {
@@ -14812,6 +15103,8 @@ if (charConfirmBtn) charConfirmBtn.addEventListener('click', () => {
   if (typeof renderInventory === 'function') renderInventory();
   if (typeof updateCamera === 'function') updateCamera();
   lastAutoSave = performance.now();
+  activeCharId = null;
+  try { saveGame(true); } catch (_) {}
 });
 
 /* =====================================================================
@@ -15635,7 +15928,16 @@ Player.prototype.getHpRegenAmount = function(){ return _psvHp.call(this) + getPa
 const _psvMana = Player.prototype.getManaRegenAmount;
 Player.prototype.getManaRegenAmount = function(){ return _psvMana.call(this) + getPassiveBonus('mana'); };
 const _psvAtk = Player.prototype.getPhysicalClassDamage;
-Player.prototype.getPhysicalClassDamage = function(){ return _psvAtk.call(this) + getPassiveBonus('atk'); };
+Player.prototype.getPhysicalClassDamage = function(){ return _psvAtk.call(this) + getPassiveBonus('atk') + getEquipAtkBonus(); };
+function getEquipAtkBonus() {
+  let t = 0;
+  if (typeof inventory !== 'undefined' && inventory.equipment) Object.keys(inventory.equipment).forEach(sl => {
+    const st = inventory.equipment[sl]; if (!st) return;
+    const d = ITEM_DEFS[typeof st === 'string' ? st : st.id];
+    if (d && d.atkBonus) t += d.atkBonus | 0;
+  });
+  return t;
+}
 function checkPassiveUnlock(silent){
   if (!player || !player.classId) return false;
   const id = CLASS_PASSIVE_BY_CLASS[player.classId], d = CLASS_PASSIVES[id];
